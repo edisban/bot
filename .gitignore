@@ -1,0 +1,28 @@
+# Environment variables
+.env
+.env.local
+
+# Build outputs
+target/
+bot-back/target/
+bot-front/dist/
+bot-front/node_modules/
+
+# Logs
+*.log
+bot-back/maven-test.log
+bot-back/test-output.txt
+
+# Maven
+bot-back/.mvn/wrapper/maven-wrapper.properties
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Misc
+bot-back/jackson-dep.txt

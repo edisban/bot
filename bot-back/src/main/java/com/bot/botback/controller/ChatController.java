@@ -1,0 +1,65 @@
+package com.bot.botback.controller;
+
+import com.bot.botback.dto.MessageRequest;
+import com.bot.botback.model.ChatMessage;
+import com.bot.botback.repository.ChatMessageRepository;
+import com.bot.botback.service.GeminiService;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/chat")
+@CrossOrigin(origins = {"http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:5174", "http://127.0.0.1:5174"})
+public class ChatController {
+
+    private final ChatMessageRepository chatRepo;
+    private final GeminiService geminiService;
+
+    public ChatController(ChatMessageRepository chatRepo, GeminiService geminiService) {
+        this.chatRepo = chatRepo;
+        this.geminiService = geminiService;
+    }
+
+    @GetMapping("/history/{userId}")
+    public List<ChatMessage> getHistory(@PathVariable Long userId) {
+        return chatRepo.findByUserIdOrderByCreatedAtAsc(userId);
+    }
+
+    @PostMapping("/send")
+    public Map<String, String> sendMessage(@RequestBody MessageRequest req) {
+        if (req == null || req.getMessage() == null || req.getMessage().isBlank()) {
+            return Map.of("reply", "Please provide a message to continue.");
+        }
+
+        Long userId = req.getUserId() != null ? req.getUserId() : 1L;
+
+        ChatMessage userMessage = new ChatMessage();
+        userMessage.setUserId(userId);
+        userMessage.setSender("USER");
+        userMessage.setContent(req.getMessage());
+        chatRepo.save(userMessage);
+
+        String reply;
+        try {
+            reply = geminiService.generateReply(req.getMessage());
+        } catch (Exception ex) {
+            reply = "AI is unavailable right now. The Gemini service failed.";
+        }
+
+        ChatMessage botReply = new ChatMessage();
+        botReply.setUserId(userId);
+        botReply.setSender("BOT");
+        botReply.setContent(reply);
+        chatRepo.save(botReply);
+
+        return Map.of("reply", reply);
+    }
+}
