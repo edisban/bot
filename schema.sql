@@ -26,12 +26,11 @@ CREATE TABLE IF NOT EXISTS memory_vault (
     user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
     fact TEXT NOT NULL,
     category VARCHAR(50) DEFAULT 'General',
-    embedding VECTOR(768), -- Embedding διάσταση για Gemini
+    embedding TEXT, -- Embedding stored as TEXT, cast to vector for similarity search
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_memory_vault_embedding ON memory_vault 
-USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
+-- Similarity search uses ORDER BY CAST(embedding AS vector) with sequential scan (sufficient for personal chatbot scale)
 
 -- 5. Ραντεβού & Υποχρεώσεις (Reminders / Tasks)
 CREATE TABLE IF NOT EXISTS reminders (

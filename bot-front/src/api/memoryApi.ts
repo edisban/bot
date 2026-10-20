@@ -1,4 +1,4 @@
-import { apiFetch } from './apiClient';
+import { apiFetch } from "./apiClient";
 
 export type MemoryItem = {
   id: number;
@@ -6,6 +6,6 @@ export type MemoryItem = {
   createdAt: string;
 };
 
-export async function getMemoryItems(userId: number): Promise<MemoryItem[]> {
+export async function getMemory(userId: number): Promise<MemoryItem[]> {
   return apiFetch<MemoryItem[]>(`/api/memory/${userId}`);
 }

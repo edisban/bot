@@ -11,8 +11,8 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api")
-@CrossOrigin(origins = "http://localhost:5173")
+@RequestMapping("/api/memory")
+@CrossOrigin(origins = {"http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:5174", "http://127.0.0.1:5174", "http://localhost:80"})
 public class MemoryController {
 
     private final MemoryVaultRepository memoryVaultRepository;
@@ -21,7 +21,7 @@ public class MemoryController {
         this.memoryVaultRepository = memoryVaultRepository;
     }
 
-    @GetMapping("/memory/{userId}")
+    @GetMapping("/{userId}")
     public List<MemoryVault> getMemory(@PathVariable Long userId) {
         return memoryVaultRepository.findByUserIdOrderByCreatedAtDesc(userId);
     }

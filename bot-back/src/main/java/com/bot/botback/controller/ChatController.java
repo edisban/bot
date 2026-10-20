@@ -3,7 +3,8 @@ package com.bot.botback.controller;
 import com.bot.botback.dto.MessageRequest;
 import com.bot.botback.model.ChatMessage;
 import com.bot.botback.repository.ChatMessageRepository;
-import com.bot.botback.service.GeminiService;
+import com.bot.botback.service.AiService;
+import com.bot.botback.service.MemoryService;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -21,11 +22,13 @@ import java.util.Map;
 public class ChatController {
 
     private final ChatMessageRepository chatRepo;
-    private final GeminiService geminiService;
+    private final AiService aiService;
+    private final MemoryService memoryService;
 
-    public ChatController(ChatMessageRepository chatRepo, GeminiService geminiService) {
+    public ChatController(ChatMessageRepository chatRepo, AiService aiService, MemoryService memoryService) {
         this.chatRepo = chatRepo;
-        this.geminiService = geminiService;
+        this.aiService = aiService;
+        this.memoryService = memoryService;
     }
 
     @GetMapping("/history/{userId}")
@@ -49,9 +52,9 @@ public class ChatController {
 
         String reply;
         try {
-            reply = geminiService.generateReply(req.getMessage());
+            reply = aiService.generateReply(userId, req.getMessage());
         } catch (Exception ex) {
-            reply = "AI is unavailable right now. The Gemini service failed.";
+            reply = "I'm having trouble connecting right now. Can you try that again?";
         }
 
         ChatMessage botReply = new ChatMessage();
@@ -59,6 +62,9 @@ public class ChatController {
         botReply.setSender("BOT");
         botReply.setContent(reply);
         chatRepo.save(botReply);
+
+        // Ingest user message to memory service for semantic search
+        memoryService.ingestFact(userId, req.getMessage(), "General");
 
         return Map.of("reply", reply);
     }

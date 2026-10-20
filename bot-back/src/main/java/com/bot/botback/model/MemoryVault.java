@@ -7,10 +7,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.OffsetDateTime;
@@ -20,9 +17,6 @@ import java.time.ZoneOffset;
 @Table(name = "memory_vault")
 @Getter
 @Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class MemoryVault {
 
     @Id
@@ -35,11 +29,22 @@ public class MemoryVault {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String fact;
 
-    @Column(columnDefinition = "VECTOR(768)")
+    @Column(columnDefinition = "TEXT")
     private String embedding;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
+
+    public MemoryVault() {
+    }
+
+    public MemoryVault(Long id, Long userId, String fact, String embedding, OffsetDateTime createdAt) {
+        this.id = id;
+        this.userId = userId;
+        this.fact = fact;
+        this.embedding = embedding;
+        this.createdAt = createdAt;
+    }
 
     @PrePersist
     public void prePersist() {

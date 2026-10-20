@@ -1,25 +1,102 @@
-# RoboFriend
+# RoboFriend - Production-Ready Full-Stack AI Companion
 
-A full-stack AI chatbot with chat history, reminders, and semantic memory search via vector embeddings.
+RoboFriend is a full-stack AI companion combining conversational chat, long-term semantic memory, and natural-language reminders. It pairs a Spring Boot backend with a React frontend, backed by PostgreSQL + pgvector, with a Python ML microservice for sentence embeddings, and powered by the Gemini API.
 
 ## Tech Stack
 
-- **Frontend**: React, TypeScript, Vite, Material UI
-- **Backend**: Spring Boot (Java), JPA, PostgreSQL
-- **ML Service**: Python, FastAPI, sentence-transformers, pgvector
-- **Database**: PostgreSQL with pgvector extension
+![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.x-6DB33F?logo=springboot&logoColor=white)
+![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
+![pgvector](https://img.shields.io/badge/pgvector-enabled-336791)
+![Gemini API](https://img.shields.io/badge/Gemini_API-LLM-4285F4?logo=google&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-Python_ML-009688?logo=fastapi&logoColor=white)
 
-## Architecture Overview
+## Key Features
 
-- **React Frontend**: User interface for chat, voice input, reminders, and authentication.
-- **Spring Boot Backend**: Handles auth, chat, reminders, and memory ingestion via REST APIs.
-- **FastAPI ML Service**: Generates embeddings with sentence-transformers and performs semantic search over pgvector.
-- **PostgreSQL + pgvector**: Stores users, chat messages, reminders, and vector embeddings in `memory_vault` for similarity search.
+- Context-aware AI chat with long-term memory retrieval via pgvector embeddings and the Gemini API.
+- Smart reminders system with local natural-language parsing (no LLM round-trip for scheduling).
+- Clean, responsive UI with real-time status indicators and dark theme.
+- Containerized full stack via Docker Compose (Postgres, backend, frontend, memory service).
+- Voice overlay support in the frontend.
 
-## Quick Start
+## Architecture
 
-```bash
-docker compose up -d
+```
+┌─────────────┐     ┌──────────────┐     ┌──────────────────┐
+│  React SPA  │────▶│ Spring Boot  │────▶│  PostgreSQL +    │
+│  (Vite/TS)  │     │   Backend    │     │     pgvector     │
+└─────────────┘     └──────┬───────┘     └────────┬─────────┘
+                           │                      │
+                           ▼                      ▼
+                    ┌──────────────┐     ┌──────────────────┐
+                    │  Gemini API  │     │ Python ML Service│
+                    │  (LLM/Chat)  │     │ (sentence-transf)│
+                    └──────────────┘     └──────────────────┘
 ```
 
-Once running, access the app at [http://localhost](http://localhost).
+- **Backend**: Java 17, Spring Boot, Spring Data JPA, Lombok, PostgreSQL + pgvector.
+- **Frontend**: React, TypeScript, Vite, Tailwind CSS / MUI.
+- **AI & ML Integration**: Gemini API for LLM responses; Python FastAPI service (`all-MiniLM-L6-v2` via sentence-transformers) generates 384-dim embeddings stored in pgvector for semantic memory search.
+- **Python ML Service**: FastAPI app exposing `/embed`, `/search`, `/ingest`, `/health`. Uses `sentence-transformers` model `all-MiniLM-L6-v2` (384 dimensions) and `pgvector` for cosine-similarity search over `memory_vault`.
+
+## Getting Started
+
+### Prerequisites
+
+- Java 17
+- Node.js 18+
+- Python 3.10+ (for memory service)
+- Docker & Docker Compose
+
+### Environment Setup
+
+Create a `.env` file in the project root:
+
+```
+GEMINI_API_KEY=your_gemini_api_key
+SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5433/botdb
+SPRING_DATASOURCE_USERNAME=botuser
+SPRING_DATASOURCE_PASSWORD=botpass
+MEMORY_SERVICE_TOKEN=local-dev-token
+```
+
+### Run with Docker Compose
+
+```
+docker compose up --build
+```
+
+Frontend: `http://localhost/` — Backend API: `http://localhost:8080` — Memory service: `http://localhost:8000`.
+
+### Run Locally
+
+Backend:
+```
+cd bot-back
+./mvnw spring-boot:run
+```
+
+Frontend:
+```
+cd bot-front
+npm install
+npm run dev
+```
+
+Memory service:
+```
+cd ai-memory-service
+pip install -r requirements.txt
+uvicorn main:app --port 8000
+```
+
+## API & Database Structure
+
+Entities:
+
+- `User` — account identity (username, password hash).
+- `ChatMessage` — conversation history (user/bot messages per user).
+- `MemoryVault` — long-term memory facts with vector embeddings.
+- `Reminder` — scheduled reminders with status (PENDING/DONE).
+
+Health check: `GET /api/health`. Memory service health: `GET /health`.

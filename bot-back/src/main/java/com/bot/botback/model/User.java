@@ -7,10 +7,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.OffsetDateTime;
@@ -20,9 +17,6 @@ import java.time.ZoneOffset;
 @Table(name = "users")
 @Getter
 @Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class User {
 
     @Id
@@ -37,6 +31,16 @@ public class User {
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
+
+    public User() {
+    }
+
+    public User(Long id, String username, String passwordHash, OffsetDateTime createdAt) {
+        this.id = id;
+        this.username = username;
+        this.passwordHash = passwordHash;
+        this.createdAt = createdAt;
+    }
 
     @PrePersist
     public void prePersist() {

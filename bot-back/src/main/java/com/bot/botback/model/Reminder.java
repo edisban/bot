@@ -7,10 +7,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.OffsetDateTime;
@@ -20,9 +17,6 @@ import java.time.ZoneOffset;
 @Table(name = "reminders")
 @Getter
 @Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class Reminder {
 
     @Id
@@ -38,7 +32,6 @@ public class Reminder {
     @Column(name = "scheduled_at", nullable = false)
     private OffsetDateTime scheduledAt;
 
-    @Builder.Default
     @Column(length = 20)
     private String status = "PENDING";
 
@@ -48,10 +41,26 @@ public class Reminder {
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
+    public Reminder() {
+    }
+
+    public Reminder(Long id, Long userId, String title, OffsetDateTime scheduledAt, String status, String notes, OffsetDateTime createdAt) {
+        this.id = id;
+        this.userId = userId;
+        this.title = title;
+        this.scheduledAt = scheduledAt;
+        this.status = status == null ? "PENDING" : status;
+        this.notes = notes;
+        this.createdAt = createdAt;
+    }
+
     @PrePersist
     public void prePersist() {
         if (createdAt == null) {
             createdAt = OffsetDateTime.now(ZoneOffset.UTC);
+        }
+        if (status == null) {
+            status = "PENDING";
         }
     }
 }

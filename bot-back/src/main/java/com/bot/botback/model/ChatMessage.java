@@ -7,10 +7,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.OffsetDateTime;
@@ -20,9 +17,6 @@ import java.time.ZoneOffset;
 @Table(name = "chat_messages")
 @Getter
 @Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class ChatMessage {
 
     @Id
@@ -40,6 +34,17 @@ public class ChatMessage {
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
+
+    public ChatMessage() {
+    }
+
+    public ChatMessage(Long id, Long userId, String sender, String content, OffsetDateTime createdAt) {
+        this.id = id;
+        this.userId = userId;
+        this.sender = sender;
+        this.content = content;
+        this.createdAt = createdAt;
+    }
 
     @PrePersist
     public void prePersist() {

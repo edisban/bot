@@ -1,5 +1,3 @@
-version: '3.9'
-
 services:
   postgres:
     image: pgvector/pgvector:pg16
@@ -7,54 +5,95 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_DB: botdb
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
+      POSTGRES_USER: botuser
+      POSTGRES_PASSWORD: botpass
     ports:
       - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql
+      - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d botdb"]
+      test: ["CMD-SHELL", "pg_isready -U botuser -d botdb"]
       interval: 10s
       timeout: 5s
       retries: 10
-      start_period: 20s
+      start_period: 30s
 
-  backend:
-    build:
-      context: ./bot-back
-      dockerfile: Dockerfile
-    container_name: bot_backend
-    restart: unless-stopped
-    environment:
-      DB_URL: jdbc:postgresql://postgres:5432/botdb
-      DB_USERNAME: postgres
-      DB_PASSWORD: password
-      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
-    ports:
-      - "8080:8080"
+  db-migrate:
+    image: postgres:16-alpine
+    container_name: bot_db_migrate
     depends_on:
       postgres:
         condition: service_healthy
+    environment:
+      PGHOST: postgres
+      PGDATABASE: botdb
+      APP_DB_USER: botuser
+      APP_DB_PASSWORD: botpass
+      LEGACY_DB_SUPERUSER: postgres
+      LEGACY_DB_PASSWORD: password
+    volumes:
+      - ./migrate.sh:/migrate.sh:ro
+    entrypoint: ["sh", "/migrate.sh"]
+    restart: "no"
+
+  backend:
+    build: ./bot-back
+    container_name: bot_backend
+    restart: unless-stopped
+    depends_on:
+      db-migrate:
+        condition: service_completed_successfully
+      ai-memory-service:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/botdb
+      SPRING_DATASOURCE_USERNAME: botuser
+      SPRING_DATASOURCE_PASSWORD: botpass
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      MEMORY_SERVICE_URL: http://ai-memory-service:8000
+      MEMORY_SERVICE_TOKEN: ${MEMORY_SERVICE_TOKEN:-local-dev-token}
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/api/chat/history/1 >/dev/null 2>&1 || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/api/health >/dev/null 2>&1 || exit 1"]
       interval: 15s
       timeout: 10s
       retries: 10
-      start_period: 30s
+      start_period: 40s
 
   frontend:
-    build:
-      context: ./bot-front
-      dockerfile: Dockerfile
+    build: ./bot-front
     container_name: bot_frontend
     restart: unless-stopped
     ports:
       - "80:80"
     depends_on:
       backend:
-        condition: service_started
+        condition: service_healthy
+
+  ai-memory-service:
+    build: ./ai-memory-service
+    container_name: bot_ai_memory
+    restart: unless-stopped
+    expose:
+      - "8000"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: botdb
+      DB_USER: botuser
+      DB_PASSWORD: botpass
+      MEMORY_SERVICE_TOKEN: ${MEMORY_SERVICE_TOKEN:-local-dev-token}
+    depends_on:
+      db-migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,os,sys; r=urllib.request.Request('http://localhost:8000/health', headers={'X-Service-Token': os.environ.get('MEMORY_SERVICE_TOKEN','')}); sys.exit(0 if urllib.request.urlopen(r, timeout=5).status == 200 else 1)\""]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 40s
 
 volumes:
   pgdata:
