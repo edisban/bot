@@ -33,10 +33,10 @@ public class AiService {
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
 
-    @Value("${gemini.api.key}")
+    @Value("${groq.api.key}")
     private String apiKey;
 
-    @Value("${gemini.api.model:gemini-3.8-flash}")
+    @Value("${groq.api.model:openai/gpt-oss-20b}")
     private String modelName;
 
     private static final int MAX_RETRIES = 3;
@@ -47,20 +47,20 @@ public class AiService {
         this.memoryService = memoryService;
         this.reminderRepository = reminderRepository;
         this.restClient = RestClient.builder()
-                .baseUrl("https://generativelanguage.googleapis.com")
+                .baseUrl("https://api.groq.com/openai/v1")
                 .build();
         this.objectMapper = new ObjectMapper();
     }
 
     @PostConstruct
-    void warnIfGeminiUnavailable() {
-        if (!isGeminiConfigured()) {
-            log.warn("GEMINI_API_KEY is not configured. RoboFriend will reply using local fallbacks "
+    void warnIfGroqUnavailable() {
+        if (!isGroqConfigured()) {
+            log.warn("GROQ_API_KEY is not configured. RoboFriend will reply using local fallbacks "
                     + "and will not extract facts or reminders from new messages.");
         }
     }
 
-    public boolean isGeminiConfigured() {
+    public boolean isGroqConfigured() {
         return apiKey != null && !apiKey.isBlank();
     }
 
@@ -72,15 +72,15 @@ public class AiService {
         List<String> relatedFacts = getRelevantFacts(userId, userMessage);
         List<Reminder> dueReminders = getDueRemindersSafely(userId);
 
-        if (!isGeminiConfigured()) {
-            log.warn("Gemini API key is missing; returning a local fallback reply.");
+        if (!isGroqConfigured()) {
+            log.warn("Groq API key is missing; returning a local fallback reply.");
             markRemindersAsSent(dueReminders);
             boolean reminderCreated = saveLocalReminderIfPresent(userId, userMessage);
             return buildLocalReply(userMessage, relatedFacts, null, reminderCreated, dueReminders);
         }
 
         try {
-            ExtractionResult result = callGeminiWithRetry(userId, userMessage, relatedFacts, dueReminders);
+            ExtractionResult result = callGroqWithRetry(userId, userMessage, relatedFacts, dueReminders);
 
             markRemindersAsSent(dueReminders);
             persistExtraction(userId, result);
@@ -93,7 +93,7 @@ public class AiService {
             String body = e instanceof RestClientResponseException responseException
                     ? responseException.getResponseBodyAsString()
                     : e.getMessage();
-            log.warn("Gemini API failed with HTTP {}; falling back to local reply. Body: {}", status, body);
+            log.warn("Groq (Groq) API failed with HTTP {}; falling back to local reply. Body: {}", status, body);
 
             markRemindersAsSent(dueReminders);
             boolean reminderCreated = saveLocalReminderIfPresent(userId, userMessage);
@@ -117,14 +117,14 @@ public class AiService {
     private String describeFailure(int status) {
         switch (status) {
             case 402:
-                return "Heads up: my AI provider account has run out of prepaid credits, so I could not analyze that message. Please add credits at https://ai.studio/projects to restore full functionality.";
+                return "AI service unavailable due to insufficient provider credits. Please try again later.";
             case 429:
-                return "Heads up: my AI provider is rate-limiting requests right now, so I could not analyze that message. Please try again in a moment.";
+                return "AI service is rate-limited. Please try again in a moment.";
             case 401:
             case 403:
-                return "Heads up: my AI provider rejected the API key, so I could not analyze that message. Please check the GEMINI_API_KEY configuration.";
+                return "AI service unavailable right now. Please try again later.";
             default:
-                return "Heads up: I could not reach my AI service just now, so I could not analyze that message. Please try again in a moment.";
+                return "AI service unavailable right now. Please try again later.";
         }
     }
 
@@ -149,21 +149,21 @@ public class AiService {
         }
     }
 
-    private ExtractionResult callGeminiWithRetry(Long userId, String userMessage, List<String> facts, List<Reminder> dueReminders) {
+    private ExtractionResult callGroqWithRetry(Long userId, String userMessage, List<String> facts, List<Reminder> dueReminders) {
         RestClientException lastException = null;
         for (int attempt = 1; attempt <= MAX_RETRIES; attempt++) {
             try {
-                return callGemini(userId, userMessage, facts, dueReminders);
+                return callGroq(userId, userMessage, facts, dueReminders);
             } catch (RestClientException e) {
                 lastException = e;
                 int status = statusOf(e);
                 if (status > 0) {
-                    log.warn("Gemini attempt {}/{} failed: HTTP {} - {}", attempt, MAX_RETRIES, status, bodyOf(e));
+                    log.warn("Groq attempt {}/{} failed: HTTP {} - {}", attempt, MAX_RETRIES, status, bodyOf(e));
                 } else {
-                    log.warn("Gemini attempt {}/{} failed: {}", attempt, MAX_RETRIES, e.getMessage());
+                    log.warn("Groq attempt {}/{} failed: {}", attempt, MAX_RETRIES, e.getMessage());
                 }
                 if (status > 0 && NON_RETRYABLE_STATUSES.contains(status)) {
-                    log.warn("Gemini error HTTP {} is not retryable; aborting attempts.", status);
+                    log.warn("Groq error HTTP {} is not retryable; aborting attempts.", status);
                     throw e;
                 }
                 if (attempt < MAX_RETRIES) {
@@ -171,7 +171,7 @@ public class AiService {
                 }
             }
         }
-        throw lastException != null ? lastException : new RestClientException("Gemini call failed");
+        throw lastException != null ? lastException : new RestClientException("Groq call failed");
     }
 
     private int statusOf(RestClientException exception) {
@@ -188,7 +188,7 @@ public class AiService {
         return exception.getMessage();
     }
 
-    private ExtractionResult callGemini(Long userId, String userMessage, List<String> facts, List<Reminder> dueReminders) {
+    private ExtractionResult callGroq(Long userId, String userMessage, List<String> facts, List<Reminder> dueReminders) {
         String memoryContext = facts.isEmpty()
                 ? "None yet"
                 : String.join("\n", facts.stream().map(f -> "- " + f).collect(Collectors.toList()));
@@ -261,32 +261,28 @@ public class AiService {
 
         @SuppressWarnings("unchecked")
         Map<String, Object> response = restClient.post()
-                .uri("/v1/models/{model}:generateContent?key={key}", modelName, apiKey)
+                .uri("/chat/completions")
+                .header("Authorization", "Bearer " + apiKey)
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(Map.of("contents", List.of(Map.of("parts", List.of(Map.of("text", prompt))))))
+                .body(Map.of(
+                        "model", modelName,
+                        "messages", List.of(Map.of("role", "user", "content", prompt)),
+                        "temperature", 0.7))
                 .retrieve()
                 .body(Map.class);
 
-        if (response == null || response.get("candidates") == null) {
-            throw new IllegalStateException("Gemini response did not contain candidates");
+        if (response == null || response.get("choices") == null) {
+            throw new IllegalStateException("Groq response did not contain choices");
         }
 
         @SuppressWarnings("unchecked")
-        List<Map<String, Object>> candidates = (List<Map<String, Object>>) response.get("candidates");
-        Map<String, Object> candidate = candidates.get(0);
+        List<Map<String, Object>> choices = (List<Map<String, Object>>) response.get("choices");
+        Map<String, Object> choice = choices.get(0);
         @SuppressWarnings("unchecked")
-        Map<String, Object> content = (Map<String, Object>) candidate.get("content");
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> parts = (List<Map<String, Object>>) content.get("parts");
+        Map<String, Object> message = (Map<String, Object>) choice.get("message");
+        String text = (String) message.get("content");
 
-        StringBuilder text = new StringBuilder();
-        for (Map<String, Object> part : parts) {
-            if (part.get("text") != null) {
-                text.append((String) part.get("text"));
-            }
-        }
-
-        return parseExtractionResult(text.toString().trim());
+        return parseExtractionResult(text.trim());
     }
 
     private ExtractionResult parseExtractionResult(String jsonText) {
@@ -315,7 +311,7 @@ public class AiService {
 
             return new ExtractionResult(reply, facts, reminder);
         } catch (Exception e) {
-            log.error("Failed to parse Gemini JSON response: {}", e.getMessage());
+            log.error("Failed to parse Groq JSON response: {}", e.getMessage());
             throw new IllegalStateException("Failed to parse AI response", e);
         }
     }
@@ -408,9 +404,15 @@ public class AiService {
             response.append(". ");
         }
 
-        if (facts != null && !facts.isEmpty()) {
-            response.append("Here's what I know about you: ");
-            response.append(String.join("; ", facts)).append(". ");
+        if (failureNote == null || failureNote.isBlank()) {
+            if (facts != null && !facts.isEmpty()) {
+                response.append("Here's what I know about you: ");
+                response.append(String.join("; ", facts)).append(". ");
+            }
+        } else {
+            response.setLength(0);
+            response.append(failureNote);
+            return response.toString();
         }
 
         if (reminderCreated) {

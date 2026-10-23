@@ -22,7 +22,7 @@ public class HealthController {
     public Map<String, Object> health() {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("status", "ok");
-        body.put("geminiConfigured", aiService.isGeminiConfigured());
+        body.put("groqConfigured", aiService.isGroqConfigured());
         return body;
     }
 }

@@ -1,6 +1,6 @@
 # RoboFriend - Production-Ready Full-Stack AI Companion
 
-RoboFriend is a full-stack AI companion combining conversational chat, long-term semantic memory, and natural-language reminders. It pairs a Spring Boot backend with a React frontend, backed by PostgreSQL + pgvector, with a Python ML microservice for sentence embeddings, and powered by the Gemini API.
+RoboFriend is a full-stack AI companion combining conversational chat, long-term semantic memory, and natural-language reminders. It pairs a Spring Boot backend with a React frontend, backed by PostgreSQL + pgvector, with a Python ML microservice for sentence embeddings, and powered by the Groq (xAI) API.
 
 ## Tech Stack
 
@@ -8,13 +8,15 @@ RoboFriend is a full-stack AI companion combining conversational chat, long-term
 ![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
 ![pgvector](https://img.shields.io/badge/pgvector-enabled-336791)
-![Gemini API](https://img.shields.io/badge/Gemini_API-LLM-4285F4?logo=google&logoColor=white)
+![Groq (xAI) API](https://img.shields.io/badge/Groq_API-LLM-4285F4?logo=google&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-Python_ML-009688?logo=fastapi&logoColor=white)
 
 ## Key Features
 
-- Context-aware AI chat with long-term memory retrieval via pgvector embeddings and the Gemini API.
+- Context-aware AI chat with long-term memory retrieval via pgvector embeddings and the Groq (xAI) API.
 - Smart reminders system with local natural-language parsing (no LLM round-trip for scheduling).
+- Voice conversation & speech-to-text: real-time hands-free voice interaction and speech recognition.
+- Interactive audio visualizer UI: animated dynamic sound wave / waveform overlay visualizing active voice listening and AI response playback.
 - Clean, responsive UI with real-time status indicators and dark theme.
 - Containerized full stack via Docker Compose (Postgres, backend, frontend, memory service).
 - Voice overlay support in the frontend.
@@ -29,14 +31,14 @@ RoboFriend is a full-stack AI companion combining conversational chat, long-term
                            │                      │
                            ▼                      ▼
                     ┌──────────────┐     ┌──────────────────┐
-                    │  Gemini API  │     │ Python ML Service│
+                    │  Groq (xAI) API  │     │ Python ML Service│
                     │  (LLM/Chat)  │     │ (sentence-transf)│
                     └──────────────┘     └──────────────────┘
 ```
 
 - **Backend**: Java 17, Spring Boot, Spring Data JPA, Lombok, PostgreSQL + pgvector.
-- **Frontend**: React, TypeScript, Vite, Tailwind CSS / MUI.
-- **AI & ML Integration**: Gemini API for LLM responses; Python FastAPI service (`all-MiniLM-L6-v2` via sentence-transformers) generates 384-dim embeddings stored in pgvector for semantic memory search.
+- **Frontend**: React, TypeScript, Vite, Tailwind CSS / MUI, with an interactive voice overlay (audio visualizer).
+- **AI & ML Integration**: Groq (xAI) API for LLM responses; Python FastAPI service (`all-MiniLM-L6-v2` via sentence-transformers) generates 384-dim embeddings stored in pgvector for semantic memory search.
 - **Python ML Service**: FastAPI app exposing `/embed`, `/search`, `/ingest`, `/health`. Uses `sentence-transformers` model `all-MiniLM-L6-v2` (384 dimensions) and `pgvector` for cosine-similarity search over `memory_vault`.
 
 ## Getting Started
@@ -53,7 +55,7 @@ RoboFriend is a full-stack AI companion combining conversational chat, long-term
 Create a `.env` file in the project root:
 
 ```
-GEMINI_API_KEY=your_gemini_api_key
+Groq_API_KEY=your_Groq_api_key
 SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5433/botdb
 SPRING_DATASOURCE_USERNAME=botuser
 SPRING_DATASOURCE_PASSWORD=botpass

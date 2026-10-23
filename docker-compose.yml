@@ -52,7 +52,8 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/botdb
       SPRING_DATASOURCE_USERNAME: botuser
       SPRING_DATASOURCE_PASSWORD: botpass
-      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GROQ_API_MODEL: ${GROQ_API_MODEL:-openai/gpt-oss-20b}
       MEMORY_SERVICE_URL: http://ai-memory-service:8000
       MEMORY_SERVICE_TOKEN: ${MEMORY_SERVICE_TOKEN:-local-dev-token}
     healthcheck:

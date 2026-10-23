@@ -41,8 +41,6 @@ interface VoiceOverlayProps {
   onSendTranscript: (transcript: string) => void;
 }
 
-const WAVE_COLORS = ["#22d3ee", "#a855f7", "#f472b6", "#38bdf8"];
-
 export default function VoiceOverlay({
   open,
   onClose,
@@ -160,58 +158,65 @@ export default function VoiceOverlay({
   const drawWaveform = useCallback(
     (
       ctx: CanvasRenderingContext2D,
-      cx: number,
+      _cx: number,
       cy: number,
       width: number,
-      height: number,
+      _height: number,
       analyser: AnalyserNode,
       muted: boolean,
+      time: number,
     ) => {
       const bufferLength = analyser.frequencyBinCount;
       const dataArray = new Uint8Array(bufferLength);
       analyser.getByteFrequencyData(dataArray);
-
       const amplitude = muted
         ? 0
         : dataArray.reduce((a, b) => a + b, 0) / bufferLength / 255;
-      const maxRadius = Math.min(width, height) * 0.35;
-      const pulseRadius = 40 + amplitude * maxRadius * 0.6;
 
-      const gradient = ctx.createLinearGradient(
-        0,
-        cy - pulseRadius,
-        0,
-        cy + pulseRadius,
-      );
-      gradient.addColorStop(0, WAVE_COLORS[0]);
-      gradient.addColorStop(0.5, WAVE_COLORS[2]);
-      gradient.addColorStop(1, WAVE_COLORS[1]);
+      ctx.save();
+      ctx.globalCompositeOperation = "screen";
 
-      ctx.beginPath();
-      ctx.arc(cx, cy, pulseRadius, 0, Math.PI * 2);
-      ctx.fillStyle = gradient;
-      ctx.fill();
+      const strandCount = 22;
+      for (let s = 0; s < strandCount; s++) {
+        const seed = s * 9301 + 49297;
+        const rand = (n: number) => ((seed * (n + 1)) % 233280) / 233280;
+        const freq = 0.008 + rand(1) * 0.022;
+        const phase = rand(2) * Math.PI * 2;
+        const speed = 0.8 + rand(3) * 1.6;
+        const ampMult = 0.4 + rand(4) * 0.9;
+        const jitter = (rand(5) - 0.5) * 6;
+        const t = s / (strandCount - 1);
+        const color =
+          t < 0.33
+            ? "#00F2FE"
+            : t < 0.66
+              ? "#4FACFE"
+              : t < 0.85
+                ? "#FF007F"
+                : "#7F00FF";
 
-      const barCount = 36;
-      const barWidth = 5;
-      const barGap = 6;
-      const maxBarHeight = height * 0.22;
-
-      for (let i = 0; i < barCount; i++) {
-        const val = muted ? 0 : dataArray[i] || 0;
-        const normalized = val / 255;
-        const barHeight = Math.max(
-          4,
-          normalized * maxBarHeight * (0.5 + amplitude * 0.8),
-        );
-        const x =
-          cx - (barCount * (barWidth + barGap)) / 2 + i * (barWidth + barGap);
-        const y = cy - barHeight / 2;
-
-        const hue = 180 + (i / barCount) * 120;
-        ctx.fillStyle = `hsla(${hue}, 80%, 65%, ${0.5 + normalized * 0.5})`;
-        ctx.fillRect(x, y, barWidth, barHeight);
+        ctx.beginPath();
+        for (let x = 0; x <= width; x += 2) {
+          const envelope = Math.sin((x / width) * Math.PI);
+          const y =
+            cy +
+            (Math.sin(x * freq + time * speed + phase) *
+              (18 + amplitude * 70) *
+              ampMult +
+              jitter) *
+              envelope;
+          if (x === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.2;
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 12;
+        ctx.globalAlpha = 0.35 + rand(6) * 0.25;
+        ctx.stroke();
       }
+
+      ctx.restore();
     },
     [],
   );
@@ -219,15 +224,8 @@ export default function VoiceOverlay({
   const drawIdle = useCallback(
     (ctx: CanvasRenderingContext2D, cx: number, cy: number, time: number) => {
       const radius = 45 + Math.sin(time * 2) * 5;
-      const gradient = ctx.createRadialGradient(
-        cx,
-        cy,
-        10,
-        cx,
-        cy,
-        radius + 20,
-      );
-      gradient.addColorStop(0, "#38bdf8");
+      const gradient = ctx.createRadialGradient(cx, cy, 10, cx, cy, radius + 20);
+      gradient.addColorStop(0, "#4FACFE");
       gradient.addColorStop(1, "transparent");
 
       ctx.beginPath();
@@ -268,6 +266,7 @@ export default function VoiceOverlay({
               height,
               analyserRef.current,
               micMuted,
+              time,
             );
           } else {
             drawIdle(ctx, width / 2, height / 2, time);
@@ -292,7 +291,6 @@ export default function VoiceOverlay({
     finalTranscriptRef.current = "";
     setTimeout(() => setInterimTranscript(""), 0);
 
-    // 1. Audio Media Setup
     navigator.mediaDevices
       .getUserMedia({ audio: true })
       .then(async (stream) => {
@@ -320,7 +318,6 @@ export default function VoiceOverlay({
       })
       .catch((err) => console.error("Mic access denied:", err));
 
-    // 2. Speech Recognition Setup
     startRecognition();
 
     return () => {
@@ -364,7 +361,6 @@ export default function VoiceOverlay({
     });
   };
 
-  // Restart recognition when unmuting (micMuted goes true -> false)
   useEffect(() => {
     if (!open || micMuted) return;
     startRecognition();
@@ -397,7 +393,6 @@ export default function VoiceOverlay({
         justifyContent: "center",
       }}
     >
-      {/* Top Right Close Button */}
       <IconButton
         onClick={onClose}
         sx={{
@@ -436,7 +431,6 @@ export default function VoiceOverlay({
         </Typography>
       </Box>
 
-      {/* Reactive Visualizer Canvas */}
       <Paper
         sx={{
           width: { xs: 260, sm: 300, md: 340 },
@@ -446,6 +440,7 @@ export default function VoiceOverlay({
           bgcolor: "#0f172a",
           mb: 3,
           boxShadow: "0 0 50px rgba(56, 189, 248, 0.25)",
+          filter: "drop-shadow(0 0 16px rgba(0, 242, 254, 0.75)) drop-shadow(0 0 28px rgba(127, 0, 255, 0.5))",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -471,7 +466,6 @@ export default function VoiceOverlay({
         {micMuted ? "Microphone Muted" : "Listening..."}
       </Typography>
 
-      {/* Live Transcript Box */}
       <Box
         sx={{
           px: 3,
@@ -489,7 +483,6 @@ export default function VoiceOverlay({
         {interimTranscript || "Say something..."}
       </Box>
 
-      {/* Bottom Center Toggles */}
       <Box
         sx={{
           position: "fixed",

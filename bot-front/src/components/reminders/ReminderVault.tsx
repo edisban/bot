@@ -44,6 +44,7 @@ export default function ReminderVault({
     <Paper
       sx={{
         width: { xs: "100%", md: 260 },
+        height: "100%",
         p: { xs: 1, md: 2 },
         overflow: "hidden",
         display: "flex",

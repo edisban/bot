@@ -469,6 +469,7 @@ export default function ChatScreen({
               gap: 2,
               minHeight: 0,
               height: { xs: "unset", md: "100%" },
+              flex: { xs: "unset", md: 1 },
               overflowY: "auto",
             }}
           >
