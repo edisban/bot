@@ -11,5 +11,5 @@ jobs:
           distribution: 'temurin'
       - name: Build backend
         working-directory: bot-back
-        run: ./mvnw -q test
+        run: chmod +x mvnw && ./mvnw -q test
 
