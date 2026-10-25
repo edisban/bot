@@ -86,7 +86,7 @@ export default function VoiceOverlay({
     const rec = new SpeechCtor();
     rec.continuous = true;
     rec.interimResults = true;
-    rec.lang = navigator.language || "en-US";
+    rec.lang = "el-GR";
 
     rec.onresult = (event: SpeechRecognitionEvent) => {
       let full = "";
