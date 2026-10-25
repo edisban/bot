@@ -1,10 +1,21 @@
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
-export async function sendMessage(userId: number, message: string) {
-  const res = await fetch(`${API_BASE}/api/chat/send`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ userId, message }),
+async function request(path: string, options: RequestInit = {}) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...options,
+    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
   });
-  return res.json();
+  const text = await res.text();
+  let data: any = null;
+  try { data = text ? JSON.parse(text) : null; } catch { data = { error: text }; }
+  if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+  return data;
+}
+
+export async function login(username: string, password: string) {
+  return request('/api/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) });
+}
+
+export async function sendMessage(userId: number, message: string) {
+  return request('/api/chat/send', { method: 'POST', body: JSON.stringify({ userId, message }) });
 }

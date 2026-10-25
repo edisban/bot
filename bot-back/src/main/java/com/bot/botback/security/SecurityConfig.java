@@ -21,6 +21,7 @@ public class SecurityConfig {
         http.csrf(c -> c.disable())
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(a -> a
+                .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/", "/api/health", "/api/auth/**").permitAll()
                 .anyRequest().authenticated())
             .addFilterBefore(new JwtFilter(jwtUtil), UsernamePasswordAuthenticationFilter.class);
