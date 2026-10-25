@@ -31,7 +31,7 @@ public class AuthController {
         u.setUsername(username);
         u.setPasswordHash(encoder.encode(password));
         userRepository.save(u);
-        return ResponseEntity.ok(Map.of("token", jwtUtil.generate(username)));
+        return ResponseEntity.ok(Map.of("token", jwtUtil.generate(username), "userId", u.getId(), "username", username));
     }
 
     @PostMapping("/login")
@@ -40,7 +40,7 @@ public class AuthController {
         String password = body.get("password");
         return userRepository.findByUsername(username)
                 .filter(u -> encoder.matches(password, u.getPasswordHash()))
-                .map(u -> ResponseEntity.ok(Map.of("token", jwtUtil.generate(username))))
+                .map(u -> ResponseEntity.ok(Map.of("token", jwtUtil.generate(username), "userId", u.getId(), "username", username)))
                 .orElse(ResponseEntity.status(401).body(Map.of("error", "invalid credentials")));
     }
 }
