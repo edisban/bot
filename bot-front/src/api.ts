@@ -5,9 +5,14 @@ async function request(path: string, options: RequestInit = {}) {
     ...options,
     headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
   });
+  const ct = res.headers.get('content-type') || '';
   const text = await res.text();
   let data: any = null;
-  try { data = text ? JSON.parse(text) : null; } catch { data = { error: text }; }
+  if (ct.includes('application/json') && text) {
+    try { data = JSON.parse(text); } catch { data = { error: text }; }
+  } else if (text) {
+    data = { error: text };
+  }
   if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
   return data;
 }
