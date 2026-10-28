@@ -1,14 +1,4 @@
 #!/bin/sh
-# Idempotent database migration for RoboFriend.
-#
-# Runs once per stack start, before the backend. Applies the schema and role
-# changes that schema.sql cannot cover, because schema.sql only executes on an
-# empty data directory (existing volumes keep their original owner and column
-# types).
-#
-# On a fresh volume the application role is itself the superuser. On a volume
-# created before the credential switch, the legacy superuser still exists and
-# owns the tables, so the migration runs as that role and re-owns everything.
 
 set -eu
 
@@ -57,6 +47,10 @@ BEGIN
     LOOP
         EXECUTE format('ALTER TABLE public.%I OWNER TO %I', obj.relname, current_setting('app.role'));
     END LOOP;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'users' AND column_name = 'role') THEN
+        EXECUTE 'ALTER TABLE public.users ADD COLUMN role VARCHAR(20) NOT NULL DEFAULT ''USER''';
+    END IF;
 
     SELECT data_type, udt_name
       INTO col_type, col_udt

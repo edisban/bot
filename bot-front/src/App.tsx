@@ -17,6 +17,7 @@ const STORAGE_KEY = "robofriend-user";
 interface SessionUser {
   userId: number;
   username: string;
+  token: string;
 }
 
 type Screen = "login" | "welcome" | "chat";
@@ -29,7 +30,7 @@ function App() {
     if (storedUser) {
       try {
         const parsedUser = JSON.parse(storedUser) as SessionUser;
-        if (parsedUser?.userId && parsedUser?.username) {
+        if (parsedUser?.userId && parsedUser?.username && parsedUser?.token) {
           return parsedUser;
         }
       } catch {
@@ -61,7 +62,7 @@ function App() {
       const endpoint =
         authMode === "login" ? "/api/auth/login" : "/api/auth/register";
 
-      const data = await apiFetch<{ userId: number; username?: string }>(
+      const data = await apiFetch<{ userId: number; username?: string; token?: string }>(
         endpoint,
         {
           method: "POST",
@@ -72,6 +73,7 @@ function App() {
       const user = {
         userId: Number(data.userId),
         username: data.username || trimmedUsername,
+        token: data.token || "",
       };
 
       localStorage.setItem(STORAGE_KEY, JSON.stringify(user));

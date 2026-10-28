@@ -31,7 +31,6 @@ import {
   updateReminderStatus,
   type ReminderItem,
 } from "../../api/reminderApi";
-import { getMemory, type MemoryItem } from "../../api/memoryApi";
 
 interface SessionUser {
   userId: number;
@@ -66,7 +65,6 @@ export default function ChatScreen({
     },
   ]);
   const [reminders, setReminders] = useState<ReminderItem[]>([]);
-  const [, setMemories] = useState<MemoryItem[]>([]);
 
   const [input, setInput] = useState("");
   const [voiceOverlayOpen, setVoiceOverlayOpen] = useState(false);
@@ -89,8 +87,6 @@ export default function ChatScreen({
     const content = contentRef.current;
     if (!el || !content || typeof ResizeObserver === "undefined") return;
 
-    // Keep the viewport pinned to the newest message whenever the rendered
-    // content grows (initial history load, new messages, markdown reflow).
     const observer = new ResizeObserver(() => {
       scrollToBottom();
     });
@@ -103,7 +99,6 @@ export default function ChatScreen({
 
   useEffect(() => {
     scrollToBottom();
-    // Markdown and async content can change layout after the first paint.
     const timer = setTimeout(() => scrollToBottom(), 120);
     return () => clearTimeout(timer);
   }, [messages, scrollToBottom]);
@@ -194,16 +189,6 @@ export default function ChatScreen({
       });
 
     refreshReminders();
-
-    getMemory(userId)
-      .then((data) => {
-        if (cancelled) return;
-        setMemories(Array.isArray(data) ? data : []);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setMemories([]);
-      });
 
     return () => {
       cancelled = true;
@@ -478,7 +463,6 @@ export default function ChatScreen({
               onDoneToggle={handleReminderDone}
               onDelete={handleReminderDelete}
             />
-
           </Box>
         </Box>
 

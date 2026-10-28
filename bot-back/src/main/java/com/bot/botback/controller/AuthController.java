@@ -1,5 +1,6 @@
 package com.bot.botback.controller;
 
+import com.bot.botback.dto.LoginRequest;
 import com.bot.botback.model.User;
 import com.bot.botback.repository.UserRepository;
 import com.bot.botback.util.JwtUtil;
@@ -22,9 +23,9 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody Map<String, String> body) {
-        String username = body.get("username");
-        String password = body.get("password");
+    public ResponseEntity<?> register(@RequestBody LoginRequest req) {
+        String username = req.getUsername();
+        String password = req.getPassword();
         if (username == null || password == null) return ResponseEntity.badRequest().body("missing credentials");
         if (userRepository.findByUsername(username).isPresent()) return ResponseEntity.badRequest().body("user exists");
         User u = new User();
@@ -35,9 +36,9 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody Map<String, String> body) {
-        String username = body.get("username");
-        String password = body.get("password");
+    public ResponseEntity<?> login(@RequestBody LoginRequest req) {
+        String username = req.getUsername();
+        String password = req.getPassword();
         return userRepository.findByUsername(username)
                 .filter(u -> encoder.matches(password, u.getPasswordHash()))
                 .map(u -> ResponseEntity.ok(Map.of("token", jwtUtil.generate(username), "userId", u.getId(), "username", username)))

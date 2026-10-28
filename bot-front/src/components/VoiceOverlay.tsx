@@ -119,7 +119,7 @@ export default function VoiceOverlay({
         try {
           rec.start();
         } catch {
-          /* noop */
+          void 0;
         }
       }
     };
@@ -150,7 +150,7 @@ export default function VoiceOverlay({
       try {
         rec.abort();
       } catch {
-        /* noop */
+        void 0;
       }
     }
   }, []);
@@ -241,7 +241,6 @@ export default function VoiceOverlay({
     [],
   );
 
-  // Main Canvas Render Loop
   useEffect(() => {
     if (!open) return;
     let isActive = true;
@@ -284,7 +283,6 @@ export default function VoiceOverlay({
     };
   }, [open, micMuted, drawWaveform, drawIdle]);
 
-  // Audio Context & Speech Recognition Lifecycle
   useEffect(() => {
     if (!open) return;
 
@@ -326,7 +324,7 @@ export default function VoiceOverlay({
         try {
           sourceRef.current.disconnect();
         } catch {
-          /* noop */
+          void 0;
         }
       }
       if (
@@ -336,7 +334,7 @@ export default function VoiceOverlay({
         try {
           audioContextRef.current.close();
         } catch {
-          /* noop */
+          void 0;
         }
       }
       if (streamRef.current) {

@@ -63,7 +63,6 @@ public class ChatController {
         botReply.setContent(reply);
         chatRepo.save(botReply);
 
-        // Ingest user message to memory service for semantic search
         memoryService.ingestFact(userId, req.getMessage(), "General");
 
         return Map.of("reply", reply);

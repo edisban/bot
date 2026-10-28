@@ -1,7 +1,20 @@
 const API_BASE_URL =
   import.meta.env.VITE_API_URL ||
   import.meta.env.VITE_API_BASE_URL ||
-  "https://bot-n21x.onrender.com";
+  "";
+
+const TOKEN_KEY = "robofriend-user";
+
+function getToken(): string | null {
+  try {
+    const raw = localStorage.getItem(TOKEN_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { token?: string };
+    return parsed?.token ?? null;
+  } catch {
+    return null;
+  }
+}
 
 export async function apiFetch<T>(
   input: string,
@@ -9,10 +22,13 @@ export async function apiFetch<T>(
 ): Promise<T> {
   const { headers, ...rest } = init ?? {};
 
+  const token = getToken();
+
   const response = await fetch(`${API_BASE_URL}${input}`, {
     ...rest,
     headers: {
       "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(headers ?? {}),
     },
   });
@@ -30,7 +46,7 @@ export async function apiFetch<T>(
         message = body.error;
       }
     } catch {
-      // Non-JSON error body; keep the generic message.
+      void 0;
     }
     throw new Error(message);
   }
